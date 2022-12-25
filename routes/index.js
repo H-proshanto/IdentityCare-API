@@ -1,6 +1,18 @@
 var express = require('express');
+var multer = require('multer');
 var router = express.Router();
 var User = require('../models/user');
+var Image = require('../models/image');
+
+var Storage = multer.diskStorage({
+	destination: 'uploads',
+	filename: (req,file,cb) => {
+	  cb(null,Date.now+file.originalname);
+	}
+});
+var upload = multer({
+	storage: Storage
+  }).single('image');
 
 router.post('/register', function(req, res, next) {
 	console.log(req.body);
@@ -53,7 +65,6 @@ router.post('/register', function(req, res, next) {
 
 
 router.post('/login', function (req, res, next) {
-	//console.log(req.body);
 	User.findOne({email:req.body.email},function(err,data){
 		if(data){
 			
@@ -65,6 +76,7 @@ router.post('/login', function (req, res, next) {
 					username: data.username,
 					email: data.email,
 					uniqueId: data.unique_id,
+					profileImage: data.profileImage,
 				}});
 				
 			}else{
@@ -74,6 +86,36 @@ router.post('/login', function (req, res, next) {
 			res.send({"Success":"This Email Is not regestered!"});
 		}
 	});
+});
+
+router.post('/uploadUserImage', function (req, res, next) {
+	upload(req,res,(err) => {
+		if(err) {
+			console.log(err);
+		}
+		else {
+			User.findOne({unique_id: req.body.authorization},(err,data) => {
+				if(err) {
+					console.log(err);
+				} else {
+					data.profileImage = req.file.filename;
+					data.save()
+					.then(() => res.send('Successfully Uploaded'))
+					.catch((err) => console.log(err));
+				}
+			})
+			// const newImage = new Image({
+			// 	name: req.body.name,
+			// 	image: {
+			// 		data:req.file.filename,
+			// 		contentType: 'image/jpeg'
+			// 	}
+			// })
+			// newImage.save()
+			// .then(() => res.send('Successfully Uploaded'))
+			// .catch((err) => console.log(err));
+		}
+	})
 });
 
 module.exports = router;
